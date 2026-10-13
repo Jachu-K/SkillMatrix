@@ -1,0 +1,84 @@
+@startuml class-matching-cv
+!include style.iuml
+title Dopasowanie, rekomendacje i CV
+
+package "Dopasowanie i rekomendacje" {
+  class MatchingService {
+    +matchOffers(candidateId, filter): List<MatchResult>
+    +analyzeGaps(candidateId, offerId): MatchResult
+    -score(profile, offer): MatchResult
+  }
+  class MatchResult {
+    +offerId: OfferId
+    +score: Level
+    +mandatoryMet: Boolean
+    +isEligible(): Boolean
+  }
+  class SkillGap {
+    +skillId: SkillId
+    +required: Level
+    +current: Level
+    +missing(): Level
+  }
+  class RecommendationService {
+    +recommendLearning(candidateId, limit): List<LearningRecommendation>
+    -simulateGain(profile, skillId, level, offers): Int
+  }
+  class LearningRecommendation {
+    +skillId: SkillId
+    +targetLevel: Level
+    +unlockedOffers: Int
+    +offerIds: List<OfferId>
+  }
+  class OfferFilter {
+    +location: String [0..1]
+    +workMode: WorkMode [0..1]
+    +minScore: Level
+  }
+  class MatchCache {
+    +get(candidateId): List<MatchResult> [0..1]
+    +invalidate(candidateId)
+    +invalidateAll()
+  }
+  MatchResult "1" *-- "*" SkillGap
+  MatchingService ..> MatchResult : tworzy
+  MatchingService --> MatchCache
+  MatchingService ..> OfferFilter
+  RecommendationService --> MatchingService
+  RecommendationService ..> LearningRecommendation : tworzy
+}
+
+package "CV" {
+  class CvService {
+    +reviewCv(candidateId, cvId): CvReview
+    +generateCv(candidateId, offerId [0..1]): GeneratedCv
+  }
+  class CvReview {
+    +overallScore: Level
+    +suggestions: List<String>
+    +missingSkills: List<SkillId>
+    +unsupportedClaims: List<String>
+  }
+  class GeneratedCv {
+    +targetOfferId: OfferId [0..1]
+    +content: String
+    +exportPdf(): Bytes
+  }
+  CvService ..> CvReview : tworzy
+  CvService ..> GeneratedCv : tworzy
+}
+
+interface IProfileService
+interface IOfferService
+interface ISkillCatalog
+interface IAiAgent
+interface IEventBus
+
+MatchingService ..> IProfileService : getProfile()
+MatchingService ..> IOfferService : getActiveOffers()
+MatchingService ..> ISkillCatalog : propagate()
+MatchCache ..> IEventBus : ProfileUpdated,\nOffersUpdated
+CvService ..> IProfileService
+CvService ..> IOfferService
+CvService ..> IAiAgent
+@enduml

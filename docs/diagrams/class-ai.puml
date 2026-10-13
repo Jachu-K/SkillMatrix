@@ -1,0 +1,75 @@
+@startuml class-ai
+!include style.iuml
+title Agent AI — ocena, przetwarzanie ofert i dbanie o spójność grafu
+
+package "Agent AI" {
+  class AiAgentService {
+    +assessCandidate(evidence): List<SkillEstimate>
+    +extractRequirements(offerText): List<SkillRequirement>
+    +mapSkill(name, context): MappingResult
+    +reviewCv(cvText, profile): CvReview
+    +generateCv(profile, offer [0..1]): String
+  }
+  class SkillMapper {
+    +map(rawName, context): MappingResult
+    -normalize(rawName): String
+    -findCandidates(name): List<SkillMatch>
+    -askLlmToChoose(name, context, candidates): Decision
+  }
+  class MappingResult {
+    +skillId: SkillId
+    +decision: MappingDecision
+    +similarity: Decimal
+    +reason: String
+  }
+  enum MappingDecision {
+    EXISTING
+    NEW_ALIAS
+    NEW_SKILL
+    REJECTED
+  }
+  class SkillMatch {
+    +skill: Skill
+    +similarity: Decimal
+  }
+  class GraphCurator {
+    +runNightly()
+    +findDuplicateClusters(threshold): List<List<Skill>>
+    +mergeCluster(cluster)
+    +promoteProvisional(minOccurrences)
+    +proposeRelations()
+  }
+  class MappingPolicy {
+    +autoAliasThreshold: Decimal = 0.92
+    +llmReviewThreshold: Decimal = 0.75
+    +promoteAfterOccurrences: Int = 3
+    +temperature: Decimal = 0
+  }
+  class PromptLibrary {
+    +assessPrompt(): Prompt
+    +extractPrompt(): Prompt
+    +choosePrompt(): Prompt
+    +cvReviewPrompt(): Prompt
+  }
+
+  AiAgentService --> SkillMapper
+  AiAgentService --> PromptLibrary
+  SkillMapper --> MappingPolicy
+  SkillMapper ..> MappingResult : tworzy
+  SkillMapper ..> SkillMatch
+  MappingResult --> MappingDecision
+  GraphCurator --> MappingPolicy
+}
+
+interface ILlmClient {
+  +complete(prompt, jsonSchema): Json
+  +embed(text): Vector
+}
+interface ISkillCatalog
+
+AiAgentService ..> ILlmClient
+SkillMapper ..> ILlmClient : embed() / complete()
+SkillMapper ..> ISkillCatalog : findByNameOrAlias()\nfindSimilar()\naddAlias() / addSkill()
+GraphCurator ..> ISkillCatalog : mergeSkills()
+GraphCurator ..> ILlmClient
+@enduml

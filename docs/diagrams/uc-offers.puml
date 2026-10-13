@@ -1,0 +1,25 @@
+@startuml uc-offers
+!include style.iuml
+left to right direction
+title Moduł: Oferty pracy
+
+actor "Agent ofert\n<<system>>" as AG
+actor "Portal ofert\n<<system>>" as P
+actor "Agent AI\n<<system>>" as AI
+
+rectangle "Oferty pracy" {
+  usecase "UC-30 Pobierz oferty" as UC30
+  usecase "UC-31 Zamień ofertę\nna wymagania" as UC31
+  usecase "UC-32 Wygaś nieaktualne\noferty" as UC32
+}
+rectangle "Graf umiejętności" {
+  usecase "UC-23 Zmapuj nazwę\nna węzeł grafu" as UC23
+}
+
+AG --> UC30
+UC30 ..> UC31 : <<include>>
+UC30 ..> UC32 : <<include>>
+UC31 ..> UC23 : <<include>>
+UC30 --> P
+UC31 --> AI
+@enduml

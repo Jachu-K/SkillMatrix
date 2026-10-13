@@ -1,0 +1,31 @@
+@startuml uc-profile
+!include style.iuml
+left to right direction
+title Moduł: Profil umiejętności
+
+actor "Kandydat" as K
+actor "Agent AI\n<<system>>" as AI
+actor "GitHub API\n<<system>>" as GH
+
+rectangle "Profil umiejętności" {
+  usecase "UC-03 Dodaj materiały\n(CV, oceny)" as UC03
+  usecase "UC-04 Importuj z GitHuba\n(profil / repozytorium)" as UC04
+  usecase "UC-05 Oceń umiejętności" as UC05
+  usecase "UC-06 Przeglądaj graf\numiejętności" as UC06
+  usecase "UC-07 Popraw poziom ręcznie\n(niezalecane)" as UC07
+}
+rectangle "Graf umiejętności" {
+  usecase "UC-23 Zmapuj nazwę\nna węzeł grafu" as UC23
+}
+
+K --> UC03
+K --> UC04
+K --> UC05
+K --> UC06
+UC03 ..> UC05 : <<include>>
+UC04 ..> UC05 : <<include>>
+UC07 .> UC06 : <<extend>>\n[włączony widok liczbowy]
+UC05 ..> UC23 : <<include>>
+UC04 --> GH
+UC05 --> AI
+@enduml

@@ -1,0 +1,96 @@
+@startuml class-offers
+!include style.iuml
+title Oferty pracy i agent ofert
+
+package "Agent ofert" {
+  class OfferAgent {
+    +runScheduled()
+    +runForSource(sourceId): IngestionRun
+    -normalize(raw: RawOffer): JobOffer
+  }
+  interface IPortalAdapter {
+    +fetchOffers(since: DateTime): List<RawOffer>
+  }
+  class ApiPortalAdapter {
+    +apiUrl: String
+  }
+  class HtmlScraperAdapter {
+    +listUrl: String
+    +selectors: Map<String, String>
+  }
+  class RawOffer {
+    +externalId: String
+    +url: String
+    +title: String
+    +company: String
+    +body: String
+  }
+  class DuplicateDetector {
+    +fingerprint(offer): String
+    +findDuplicate(offer): JobOffer [0..1]
+  }
+  OfferAgent --> "*" IPortalAdapter
+  IPortalAdapter <|.. ApiPortalAdapter
+  IPortalAdapter <|.. HtmlScraperAdapter
+  IPortalAdapter ..> RawOffer
+  OfferAgent --> DuplicateDetector
+}
+
+package "Oferty pracy" {
+  class OfferSource {
+    +id: SourceId
+    +name: String
+    +adapterType: String
+    +schedule: CronExpression
+    +enabled: Boolean
+    --
+    wczytywane z pliku konfiguracyjnego
+  }
+  enum OfferStatus {
+    ACTIVE
+    EXPIRED
+  }
+  class JobOffer {
+    +id: OfferId
+    +externalId: String
+    +url: String
+    +title: String
+    +company: String
+    +location: String
+    +workMode: {ONSITE, HYBRID, REMOTE}
+    +status: OfferStatus
+    +fetchedAt: DateTime
+    +mandatoryRequirements(): List<SkillRequirement>
+  }
+  class SkillRequirement {
+    +skillId: SkillId
+    +minLevel: Level
+    +mandatory: Boolean
+    +weight: Decimal
+  }
+  class IngestionRun {
+    +startedAt: DateTime
+    +finishedAt: DateTime
+    +added: Int
+    +updated: Int
+    +expired: Int
+    +error: String [0..1]
+  }
+  class OfferService {
+    +getActiveOffers(filter): List<JobOffer>
+    +upsertOffers(sourceId, offers): IngestionReport
+    +expireMissing(sourceId, seenIds)
+  }
+  OfferSource "1" -- "*" JobOffer : pochodzi z
+  OfferSource "1" *-- "*" IngestionRun
+  JobOffer "1" *-- "*" SkillRequirement
+  OfferService --> "*" JobOffer
+  OfferService --> "*" OfferSource
+}
+
+interface IAiAgent {
+  +extractRequirements(offerText): List<SkillRequirement>
+}
+OfferAgent ..> IAiAgent : REST
+OfferAgent ..> OfferService : REST / IOfferService
+@enduml

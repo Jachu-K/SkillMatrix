@@ -1,0 +1,25 @@
+skinparam dpi 150
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam usecase {
+  BackgroundColor #EAF2FB
+  BorderColor #2F6DB5
+}
+skinparam actor {
+  BorderColor #2F6DB5
+}
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #2F6DB5
+  HeaderBackgroundColor #EAF2FB
+}
+skinparam interface {
+  BackgroundColor #FFF4D6
+  BorderColor #B58A2F
+}
+skinparam package {
+  BorderColor #888888
+}
+hide empty members

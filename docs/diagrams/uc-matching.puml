@@ -1,0 +1,30 @@
+@startuml uc-matching
+!include style.iuml
+left to right direction
+title Moduły: Dopasowanie i rekomendacje, CV
+
+actor "Kandydat" as K
+actor "Agent AI\n<<system>>" as AI
+
+rectangle "Dopasowanie i rekomendacje" {
+  usecase "UC-08 Przeglądaj\ndopasowane oferty" as UC08
+  usecase "UC-09 Analizuj braki\ndla oferty" as UC09
+  usecase "UC-10 Otrzymaj\nrekomendacje nauki" as UC10
+  usecase "Filtruj oferty" as FIL
+}
+rectangle "CV" {
+  usecase "UC-11 Oceń CV" as UC11
+  usecase "UC-12 Wygeneruj CV" as UC12
+  usecase "Dopasuj CV\npod ofertę" as TAIL
+}
+
+K --> UC08
+K --> UC10
+K --> UC11
+K --> UC12
+UC09 .> UC08 : <<extend>>
+FIL .> UC08 : <<extend>>
+TAIL .> UC12 : <<extend>>
+UC11 --> AI
+UC12 --> AI
+@enduml

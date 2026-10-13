@@ -1,0 +1,32 @@
+@startuml uc-graph
+!include style.iuml
+left to right direction
+title Moduł: Graf umiejętności (zarządza Agent AI)
+
+actor "Agent AI\n<<system>>" as AI
+actor "Kandydat" as K
+
+rectangle "Graf umiejętności" {
+  usecase "UC-23 Zmapuj nazwę\nna węzeł grafu" as UC23
+  usecase "UC-20 Dodaj nową\numiejętność (tymczasową)" as UC20
+  usecase "Dodaj alias\nistniejącej umiejętności" as ALIAS
+  usecase "UC-21 Scal zduplikowane\numiejętności" as UC21
+  usecase "Zatwierdź umiejętność\ntymczasową" as PROMO
+  usecase "UC-22 Wyznacz relacje\nmiędzy umiejętnościami" as UC22
+}
+rectangle "Konta" {
+  usecase "UC-01 Załóż konto" as UC01
+  usecase "UC-02 Zaloguj się" as UC02
+  usecase "UC-13 Usuń konto" as UC13
+}
+
+UC23 --> AI
+AI --> UC21
+AI --> UC22
+AI --> PROMO
+UC20 .> UC23 : <<extend>>\n[brak pasującego węzła]
+ALIAS .> UC23 : <<extend>>\n[nowy synonim]
+K --> UC01
+K --> UC02
+K --> UC13
+@enduml

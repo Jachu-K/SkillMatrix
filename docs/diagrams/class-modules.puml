@@ -1,0 +1,122 @@
+@startuml class-modules
+!include style.iuml
+title Moduły systemu i serwisy komunikacji między nimi
+left to right direction
+
+package "Konta" as M_ACC {
+  interface IAccountService {
+    +register(email, password): UserId
+    +authenticate(email, password): AuthToken
+    +getCurrentUser(token): User
+    +deleteAccount(userId)
+  }
+}
+
+package "Graf umiejętności" as M_CAT {
+  interface ISkillCatalog {
+    +getSkill(id): Skill
+    +findByNameOrAlias(name): Skill [0..1]
+    +findSimilar(embedding, k): List<SkillMatch>
+    +addSkill(name, embedding): Skill
+    +addAlias(skillId, alias)
+    +mergeSkills(sourceId, targetId)
+    +getImpliedLevels(skillId, level): Map<SkillId, Level>
+  }
+}
+
+package "Profil umiejętności" as M_PRO {
+  interface IProfileService {
+    +addEvidence(candidateId, evidence): EvidenceId
+    +importGitHub(candidateId, url): EvidenceId
+    +assess(candidateId): Assessment
+    +getProfile(candidateId): SkillProfile
+    +adjustLevel(candidateId, skillId, level)
+  }
+}
+
+package "Oferty pracy" as M_OFF {
+  interface IOfferService {
+    +getActiveOffers(filter): List<JobOffer>
+    +getOffer(offerId): JobOffer
+    +upsertOffers(sourceId, offers): IngestionReport
+    +expireMissing(sourceId, seenExternalIds)
+  }
+}
+
+package "Agent ofert\n(osobny proces)" as M_AG {
+  class OfferAgent
+}
+
+package "Agent AI\n(osobny proces)" as M_AI {
+  interface IAiAgent {
+    +assessCandidate(evidence): List<SkillEstimate>
+    +extractRequirements(offerText): List<SkillRequirement>
+    +mapSkill(name, context): MappingResult
+    +reviewCv(cvText, profile): CvReview
+    +generateCv(profile, offer [0..1]): String
+  }
+  class GraphCurator
+}
+
+package "Dopasowanie i rekomendacje" as M_MAT {
+  interface IMatchingService {
+    +matchOffers(candidateId, filter): List<MatchResult>
+    +analyzeGaps(candidateId, offerId): MatchResult
+    +recommendLearning(candidateId, limit): List<LearningRecommendation>
+  }
+}
+
+package "CV" as M_CV {
+  interface ICvService {
+    +reviewCv(candidateId, cvId): CvReview
+    +generateCv(candidateId, offerId [0..1]): GeneratedCv
+  }
+}
+
+package "Integracje zewnętrzne" as M_INT {
+  interface ILlmClient {
+    +complete(prompt, jsonSchema): Json
+    +embed(text): Vector
+  }
+  interface IGitHubClient {
+    +getUser(login): GitHubUser
+    +listRepositories(login): List<GitHubRepo>
+    +getRepository(owner, name): GitHubRepo
+  }
+  interface IPortalAdapter {
+    +fetchOffers(since): List<RawOffer>
+  }
+}
+
+package "Infrastruktura" as M_INF {
+  interface IEventBus {
+    +publish(event: DomainEvent)
+    +subscribe(eventType, handler)
+  }
+}
+
+M_PRO ..> IAiAgent
+M_PRO ..> ISkillCatalog
+M_PRO ..> IGitHubClient
+M_PRO ..> IEventBus : ProfileUpdated
+
+OfferAgent ..> IOfferService : REST
+OfferAgent ..> IPortalAdapter
+OfferAgent ..> IAiAgent : REST
+
+M_AI ..> ILlmClient
+M_AI ..> ISkillCatalog
+GraphCurator ..> IEventBus : SkillGraphChanged
+
+M_OFF ..> IEventBus : OffersUpdated
+M_ACC ..> IEventBus : AccountDeleted
+
+M_MAT ..> IProfileService
+M_MAT ..> IOfferService
+M_MAT ..> ISkillCatalog
+M_MAT ..> IEventBus : subskrybuje
+
+M_CV ..> IProfileService
+M_CV ..> IOfferService
+M_CV ..> IAiAgent
+@enduml

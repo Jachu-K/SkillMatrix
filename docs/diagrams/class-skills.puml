@@ -1,0 +1,141 @@
+@startuml class-skills
+!include style.iuml
+title Graf i profil umiejętności
+
+package "Graf umiejętności" {
+  enum SkillStatus {
+    PROVISIONAL
+    CONFIRMED
+    MERGED
+  }
+  class Skill {
+    +id: SkillId
+    +canonicalName: String
+    +aliases: List<String>
+    +category: SkillCategory
+    +embedding: Vector
+    +status: SkillStatus
+    +occurrences: Int
+    +mergedInto: SkillId [0..1]
+  }
+  enum RelationType {
+    IMPLIES
+    PART_OF
+    PREREQUISITE
+  }
+  class SkillRelation {
+    +type: RelationType
+    +factor: Level
+    --
+    Dla IMPLIES: poziom(to) >= poziom(from) * factor
+  }
+  class SkillGraph {
+    +getSkill(id): Skill
+    +findByNameOrAlias(normalizedName): Skill [0..1]
+    +findSimilar(embedding, k): List<SkillMatch>
+    +propagate(levels): Map<SkillId, Level>
+  }
+  class GraphChange {
+    +type: {ADD, ALIAS, MERGE, RELATION}
+    +payload: Json
+    +reason: String
+    +madeBy: String
+    +at: DateTime
+    +revert()
+  }
+  SkillGraph "1" *-- "*" Skill
+  SkillGraph "1" *-- "*" SkillRelation
+  SkillGraph "1" *-- "*" GraphChange : dziennik zmian
+  SkillRelation --> "1" Skill : from
+  SkillRelation --> "1" Skill : to
+}
+
+package "Profil umiejętności" {
+  class Candidate {
+    +id: UserId
+    +displayName: String
+    +githubLogin: String [0..1]
+  }
+  class SkillProfile {
+    +candidateId: UserId
+    +updatedAt: DateTime
+    +showNumericLevels: Boolean
+    +getLevel(skillId): Level
+    +applyAssessment(a: Assessment)
+    +adjust(skillId, level)
+  }
+  class SkillLevel {
+    +aiValue: Level  {0..1}
+    +manualValue: Level [0..1]
+    +confidence: Level
+    +justification: String
+    +effective(): Level
+    +tier(): LevelTier
+  }
+  enum LevelTier {
+    BEGINNER  [0, 0.25)
+    BASIC     [0.25, 0.5)
+    ADVANCED  [0.5, 0.75)
+    EXPERT    [0.75, 1]
+  }
+  abstract class Evidence {
+    +id: EvidenceId
+    +addedAt: DateTime
+    +{abstract} toPromptText(): String
+  }
+  class CvDocument {
+    +fileName: String
+    +text: String
+  }
+  class GradeRecord {
+    +course: String
+    +grade: Decimal
+    +scale: GradeScale
+  }
+  class GitHubEvidence {
+    +url: String
+    +scope: {PROFILE, REPOSITORY}
+    +repositories: List<GitHubRepo>
+    +refresh(client: IGitHubClient)
+  }
+  class GitHubRepo {
+    +name: String
+    +languages: Map<String, Int>
+    +readme: String
+    +authorCommits: Int
+    +lastPush: DateTime
+  }
+  class Assessment {
+    +id: AssessmentId
+    +createdAt: DateTime
+    +modelVersion: String
+  }
+  class SkillEstimate {
+    +skillId: SkillId
+    +level: Level
+    +confidence: Level
+    +justification: String
+    +evidenceIds: List<EvidenceId>
+  }
+  class AssessmentService {
+    +assess(candidateId): Assessment
+    -collectEvidence(candidateId): List<Evidence>
+  }
+
+  Candidate "1" -- "1" SkillProfile
+  Candidate "1" *-- "*" Evidence
+  SkillProfile "1" *-- "*" SkillLevel
+  SkillLevel --> "1" Skill
+  SkillLevel ..> LevelTier
+  Evidence <|-- CvDocument
+  Evidence <|-- GradeRecord
+  Evidence <|-- GitHubEvidence
+  GitHubEvidence "1" *-- "*" GitHubRepo
+  Assessment "1" *-- "*" SkillEstimate
+  SkillEstimate ..> Evidence : uzasadnienie
+  AssessmentService ..> Assessment : tworzy
+  AssessmentService ..> IAiAgent : assessCandidate()
+  AssessmentService ..> SkillGraph : propagate()
+}
+interface IAiAgent
+@enduml
