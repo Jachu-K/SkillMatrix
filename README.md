@@ -1,4 +1,4 @@
-# SkillMatrix.AI
+# SkillMatrix
 
 ## Opis
 
